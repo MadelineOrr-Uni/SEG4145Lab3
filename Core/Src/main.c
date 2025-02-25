@@ -52,7 +52,12 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 extern char key;
-char hold[4];
+char hold1[6];
+int len1;
+char hold2[6];
+char hold3[6];
+int len2;
+int armed;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,33 +107,125 @@ int main(void)
   /* USER CODE BEGIN 2 */
   /* USER CODE BEGIN 2 */
     SSD1306_Init();
-    SSD1306_GotoXY (0,0);
-    //SSD1306_Puts ("Voltage:", &Font_11x18, 1);
-    SSD1306_Puts ("Enter Code:", &Font_11x18, 1);
-    SSD1306_GotoXY (0, 30);
-    SSD1306_UpdateScreen();
-    SSD1306_UpdateScreen();
-    HAL_Delay (500);
+
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+    len1 = 0;
+    len2 = 0;
+    armed = 0;
+
   while (1)
   {
+
+
+	  if (armed == 0) {
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+
+
+		  SSD1306_GotoXY (0,0);
+		  SSD1306_Puts ("NOT ARMED:", &Font_11x18, 1);
+		  SSD1306_UpdateScreen();
+
+		  /* USER CODE BEGIN 3 */
+		  key = Get_Key();
+
+		  if (key == '*') {
+			  if (len1 >= 4 && len1 <= 6) {
+				  armed = 1;
+				  SSD1306_Clear();
+				  continue;
+			  } else {
+				  continue;
+			  }
+		  } else if (len1 < 6) {
+			  hold1[len1] = key;
+			  len1++;
+		  }
+
+
+		  HAL_UART_Transmit(&huart2, (uint8_t *)hold1, strlen(hold1), 100);
+		  SSD1306_GotoXY (0, 30);
+		  SSD1306_UpdateScreen();
+		  SSD1306_Puts (hold1, &Font_11x18, 1);
+		  SSD1306_UpdateScreen();
+		  HAL_Delay (500);
+
+	  } else {
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+
+		  SSD1306_GotoXY (0,0);
+		  SSD1306_Puts ("ARMED:", &Font_11x18, 1);
+		  SSD1306_UpdateScreen();
+
+		  /* USER CODE BEGIN 3 */
+			  key = Get_Key();
+			  if (key == '*') {
+				  int match = 1;
+				  if (len1 != len2) {
+					 match = 0;
+				  } else {
+					  for (int i=0;i<len1;i++) {
+						  if (hold1[i] != hold2[i]) {
+							  match = 0;
+						  }
+					  }
+				  }
+
+				  SSD1306_Clear();
+				  if (match == 1) {
+					  armed = 0;
+					  //CLEAR TRUE PASSW)RD
+					  for (int i=0;i<len1;i++) {
+						  hold1[i] = ' ';
+					  }
+					  len1 = 0;
+					  //CLEAR TEMP PASS
+					  for (int i=0;i<len1;i++) {
+						  hold2[i] = ' ';
+						  hold3[i] = ' ';
+					  }
+					  len2 = 0;
+					  continue;
+				  } else {
+					  //CLEAR TEMP PASS
+					  for (int i=0;i<len1;i++) {
+						  hold2[i] = ' ';
+						  hold3[i] = ' ';
+					  }
+					  len2 = 0;
+					  continue;
+				  }
+			  } else if (len2 < 6) {
+				  hold2[len2] = key;
+				  hold3[len2] = '*';
+				  len2++;
+			  }
+
+			  HAL_UART_Transmit(&huart2, (uint8_t *)hold1, strlen(hold1), 100);
+			  SSD1306_GotoXY (0, 30);
+			  SSD1306_UpdateScreen();
+			  SSD1306_Puts (hold3, &Font_11x18, 1);
+			  SSD1306_UpdateScreen();
+			  HAL_Delay (500);
+
+
+	  }
     /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-	/* D10 to D7 as input pins for row 0 to row 3. D6 to D3 as output for column pins C1 to C3*/
-	  key = Get_Key();
-	  sprintf(hold, "%c", key);
-	  HAL_UART_Transmit(&huart2, (uint8_t *)hold, strlen(hold), 100);
-	  SSD1306_GotoXY (0, 30);
-	  SSD1306_UpdateScreen();
-	  SSD1306_Puts (hold, &Font_11x18, 1);
-	  SSD1306_UpdateScreen();
-	  HAL_Delay (500);
+
   }
+
+  SSD1306_GotoXY (0, 30);
+  SSD1306_UpdateScreen();
+  SSD1306_Puts ("ARMED", &Font_11x18, 1);
+  SSD1306_UpdateScreen();
+  HAL_Delay (500);
+
   /* USER CODE END 3 */
 }
 
